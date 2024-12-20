@@ -1,0 +1,127 @@
+import fs from 'fs';
+import winston from 'winston';
+
+const getCurrentDate = () => {
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = String(now.getMonth() + 1).padStart(2, '0');
+	const date = String(now.getDate()).padStart(2, '0');
+	return `${year}-${month}-${date}`;
+};
+
+const LOGS_PATH = process.env.LOG_PATH;
+
+const createLogger = () => {
+	const todayDate = getCurrentDate();
+	console.log('todayDate :>> ', todayDate);
+
+	if (!fs.existsSync(`${LOGS_PATH}/${todayDate}_info.log`)) {
+		fs.openSync(`${LOGS_PATH}/${todayDate}_info.log`, 'w');
+	}
+	if (!fs.existsSync(`${LOGS_PATH}/${todayDate}_sahl.log`)) {
+		fs.openSync(`${LOGS_PATH}/${todayDate}_sahl.log`, 'w');
+	}
+	if (!fs.existsSync(`${LOGS_PATH}/${todayDate}_urbanpiper.log`)) {
+		fs.openSync(`${LOGS_PATH}/${todayDate}_urbanpiper.log`, 'w');
+	}
+	if (!fs.existsSync(`${LOGS_PATH}/${todayDate}_error.log`)) {
+		fs.openSync(`${LOGS_PATH}/${todayDate}_error.log`, 'w');
+	}
+	const loggers = {
+		infoLog: winston.createLogger({
+			format: winston.format.printf(
+				({ level, message, currentTime, data, requestMethod, requestURL }) => {
+					return JSON.stringify({
+						level: level,
+						message: message,
+						currentTime: currentTime,
+						data: data,
+						requestMethod: requestMethod,
+						requestURL: requestURL,
+					});
+				},
+			),
+			transports: [
+				new winston.transports.File({
+					filename: `${LOGS_PATH}/${todayDate}_info.log`,
+				}),
+			],
+		}),
+
+		sahlLog: winston.createLogger({
+			level: 'info',
+			format: winston.format.json(),
+			transports: [
+				new winston.transports.File({
+					filename: `${LOGS_PATH}/${todayDate}_sahl.log`,
+				}),
+			],
+		}),
+
+		urbanpiperLog: winston.createLogger({
+			level: 'info',
+			format: winston.format.json(),
+			transports: [
+				new winston.transports.File({
+					filename: `${LOGS_PATH}/${todayDate}_urbanpiper.log`,
+				}),
+			],
+		}),
+
+		errorLog: winston.createLogger({
+			level: 'error',
+			format: winston.format.json(),
+			transports: [
+				new winston.transports.File({
+					filename: `${LOGS_PATH}/${todayDate}_error.log`,
+				}),
+			],
+		}),
+	};
+
+	return loggers;
+};
+
+// Don't create loggers upfront
+// Call createLogger inside each logging function
+
+export default {
+	infoLogger: (message, data, requestMethod, requestURL) => {
+		const loggers = createLogger();
+		loggers.infoLog.info({
+			level: 'info',
+			message: message,
+			currentTime: new Date().toLocaleString(),
+			data: data,
+			requestMethod: requestMethod,
+			requestURL: requestURL,
+		});
+	},
+	sahlLogger: (requestMethod, data, requestURL) => {
+		const loggers = createLogger();
+		loggers.sahlLog.info({
+			requestMethod,
+			requestURL,
+			request: data,
+			currentTime: new Date().toLocaleString(),
+		});
+	},
+	urbanpiperLogger: (requestMethod, data, requestURL) => {
+		const loggers = createLogger();
+		loggers.urbanpiperLog.info({
+			requestMethod,
+			requestURL,
+			request: data,
+			currentTime: new Date().toLocaleString(),
+		});
+	},
+	errorLogger: (error, requestURL) => {
+		loggerData.createLogger();
+		const errorObj = {
+			message: error,
+			currentTime: new Date().toLocaleString(),
+			requestURL,
+		};
+		loggerData.loggers.errorLog.error(errorObj);
+	},
+};
